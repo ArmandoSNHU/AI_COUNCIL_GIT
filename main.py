@@ -33,19 +33,34 @@ if not os.path.exists(OUTPUT_DIR):
 files = [f for f in os.listdir("logs") if f.endswith(".txt")]
 #
 if files:
-    print(f"📂 Found {len(files)} log files. Starting Batch Audit...\n")
+    print(f"📂 Found {len(files)} log files. Starting Batch Audit with Intelligent Triage...\n")
     
     for log_file in files:
-        print(f"🚀 PROCESSING: {log_file}")
+        print(f"🚀 [COORDINATOR] Analyzing triage for: {log_file}")
         
-        # Load the specific log file for this iteration
+        # Load the specific log file
         log_path = os.path.join("logs", log_file)
         content = SecurityTools.read_scan_log(log_path)
         
+        # --- PHASE 0: INTELLIGENT TRIAGE (Master Coordinator) ---
+        # We use the Auditor (Llama 3.2) to quickly check if the file is worth processing
+        triage_query = f"Does this security log contain any actual vulnerabilities or open ports? Answer only 'YES' or 'NO': {content[:1000]}"
+        triage_result = auditor.invoke(triage_query).strip().upper()
+#
+        if "YES" not in triage_result:
+            print(f"  🍃 Log {log_file} is clean. Skipping Council review.")
+            continue  # Move to the next file
+#
+        print(f"  ✅ Vulnerabilities detected. Summoning the Council...")
+#
         # --- PHASE 1: TECHNICAL AUDIT (Llama 3.2) ---
         print(f"  🔍 Agent 1: Scanning for vulnerabilities...")
         tech_prompt = f"Identify the top 3 technical vulnerabilities in this scan: {content}"
         tech_findings = clean_output(auditor.invoke(tech_prompt))
+        
+        print("-" * 30)
+        print(f"TECHNICAL FINDINGS ({log_file}):\n{tech_findings}")
+        print("-" * 30)
         
         # --- PHASE 2: COMPLIANCE REVIEW (DeepSeek-R1) ---
         print(f"  ⚖️ Agent 2: Analyzing compliance risks...")
@@ -60,7 +75,7 @@ if files:
         """
         remediation_findings = clean_output(remediation_engineer.invoke(remediation_prompt))
 #
-        # --- ASSEMBLE THE REPORT FOR THIS SPECIFIC LOG ---
+        # --- ASSEMBLE THE INDIVIDUAL REPORT ---
         full_report = f"""# Audit Report: {log_file}
 **Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 **Target File:** {log_file}
@@ -87,6 +102,6 @@ if files:
         
         print(f"  ✅ Done. Report saved to: {report_path}\n")
 #
-    print(f"🏆 BATCH COMPLETE: {len(files)} systems audited successfully.")
+    print(f"🏆 BATCH COMPLETE: All systems audited successfully.")
 else:
     print("Error: No log files found in \\logs.")
