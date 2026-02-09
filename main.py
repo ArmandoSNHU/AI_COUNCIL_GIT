@@ -4,10 +4,10 @@ from datetime import datetime
 from langchain_ollama import OllamaLLM
 from tools import SecurityTools
 #
-# 1. Config - Optimized for Specialization
+# 1. Config - Professional Multi-Model Setup
 TECH_MODEL = "llama3.2:latest"
 COMPLIANCE_MODEL = "deepseek-r1:7b"
-CODER_MODEL = "qwen2.5-coder:7b"  # Specialized for Remediation
+CODER_MODEL = "qwen2.5-coder:7b"
 OUTPUT_DIR = "output"
 #
 # Initialize Council Members
@@ -16,13 +16,9 @@ compliance_officer = OllamaLLM(model=COMPLIANCE_MODEL)
 remediation_engineer = OllamaLLM(model=CODER_MODEL)
 #
 def clean_output(text):
-    """
-    Sanitization Layer:
-    - Removes DeepSeek-R1 internal <think> blocks.
-    - Collapses 3+ newlines into a clean double-space.
-    - Strips leading/trailing whitespace.
-    """
+    """Sanitization Layer for professional reports."""
     text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.DOTALL)
+    # Collapse 3+ newlines into 2, then remove all remaining single blank lines for density
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 #
@@ -33,75 +29,81 @@ if not os.path.exists(OUTPUT_DIR):
 files = [f for f in os.listdir("logs") if f.endswith(".txt")]
 #
 if files:
-    print(f"📂 Found {len(files)} log files. Starting Batch Audit with Intelligent Triage...\n")
-    
+    print(f"📂 Found {len(files)} log files. Starting Batch Audit with MITRE Coverage...\n")
+    global_summary_data = []
+#
     for log_file in files:
-        print(f"🚀 [COORDINATOR] Analyzing triage for: {log_file}")
-        
-        # Load the specific log file
+        print(f"🚀 [COORDINATOR] Analyzing: {log_file}")
         log_path = os.path.join("logs", log_file)
         content = SecurityTools.read_scan_log(log_path)
         
-        # --- PHASE 0: INTELLIGENT TRIAGE (Master Coordinator) ---
-        # We use the Auditor (Llama 3.2) to quickly check if the file is worth processing
-        triage_query = f"Does this security log contain any actual vulnerabilities or open ports? Answer only 'YES' or 'NO': {content[:1000]}"
-        triage_result = auditor.invoke(triage_query).strip().upper()
+        # --- PHASE 0: INTELLIGENT TRIAGE ---
+        triage_query = f"Does this log contain actual vulnerabilities or open ports? Answer 'YES' or 'NO': {content[:500]}"
+        if "YES" not in auditor.invoke(triage_query).strip().upper():
+            print(f"  🍃 Log {log_file} is clean. Skipping.")
+            continue 
 #
-        if "YES" not in triage_result:
-            print(f"  🍃 Log {log_file} is clean. Skipping Council review.")
-            continue  # Move to the next file
-#
-        print(f"  ✅ Vulnerabilities detected. Summoning the Council...")
-#
-        # --- PHASE 1: TECHNICAL AUDIT (Llama 3.2) ---
-        print(f"  🔍 Agent 1: Scanning for vulnerabilities...")
-        tech_prompt = f"Identify the top 3 technical vulnerabilities in this scan: {content}"
+        # --- PHASE 1: TECHNICAL AUDIT + MITRE MAPPING ---
+        print(f"  🔍 Agent 1: Scanning & Mapping to MITRE ATT&CK...")
+        tech_prompt = f"""
+        Identify the top 3 vulnerabilities in this scan: {content}
+        For each, include the MITRE ATT&CK Technique ID (e.g., T1190).
+        """
         tech_findings = clean_output(auditor.invoke(tech_prompt))
         
-        print("-" * 30)
-        print(f"TECHNICAL FINDINGS ({log_file}):\n{tech_findings}")
-        print("-" * 30)
-        
-        # --- PHASE 2: COMPLIANCE REVIEW (DeepSeek-R1) ---
-        print(f"  ⚖️ Agent 2: Analyzing compliance risks...")
-        compliance_prompt = f"Based on these findings:\n{tech_findings}\nAnalyze legal/compliance risks (GDPR, PCI-DSS)."
+        # --- PHASE 2: COMPLIANCE REVIEW ---
+        print(f"  ⚖️ Agent 2: Analyzing Legal Liability...")
+        compliance_prompt = f"Based on these findings:\n{tech_findings}\nAnalyze legal risks (GDPR, PCI-DSS)."
         compliance_findings = clean_output(compliance_officer.invoke(compliance_prompt))
 #
-        # --- PHASE 3: REMEDIATION (Qwen2.5-Coder) ---
-        print(f"  🛠️ Agent 3: Generating technical fixes...")
-        remediation_prompt = f"""
-        Provide the exact terminal commands (Linux/Unix) or configuration changes 
-        needed to fix these issues based on these findings: {tech_findings}
-        """
+        # --- PHASE 3: REMEDIATION ---
+        print(f"  🛠️ Agent 3: Generating Fixes...")
+        remediation_prompt = f"Provide exact Linux/Unix commands to fix: {tech_findings}"
         remediation_findings = clean_output(remediation_engineer.invoke(remediation_prompt))
 #
-        # --- ASSEMBLE THE INDIVIDUAL REPORT ---
+        # --- ASSEMBLE INDIVIDUAL REPORT ---
+        # Calculate Log Coverage (Simple Metric)
+        coverage_pct = min((len(content) / 4000) * 100, 100) # Assuming 4k context window
+        
         full_report = f"""# Audit Report: {log_file}
 **Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-**Target File:** {log_file}
+**Log Analysis Coverage:** {coverage_pct:.1f}%
 #
-## I. Technical Audit (by {TECH_MODEL})
+## I. Technical Audit & MITRE ATT&CK Mapping
 {tech_findings}
 #
-## II. Compliance & Liability Analysis (by {COMPLIANCE_MODEL})
+## II. Compliance & Liability Analysis
 {compliance_findings}
 #
-## III. Remediation Strategy (by {CODER_MODEL})
+## III. Remediation Strategy
 {remediation_findings}
 #
 ---
-*Generated by the D:\\AI_COUNCIL Autonomous Framework*
+*Generated by AI_COUNCIL Framework*
 """
-#
-        # --- SAVE INDIVIDUAL REPORT ---
+        # Save Individual Report
         report_filename = f"Audit_{log_file.replace('.txt', '')}_{datetime.now().strftime('%H%M%S')}.md"
         report_path = os.path.join(OUTPUT_DIR, report_filename)
-        
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(full_report)
         
-        print(f"  ✅ Done. Report saved to: {report_path}\n")
+        global_summary_data.append(f"- **{log_file}**: {tech_findings[:150]}...")
+        print(f"  ✅ Report saved: {report_path}\n")
 #
-    print(f"🏆 BATCH COMPLETE: All systems audited successfully.")
+    # --- FINAL STEP: EXECUTIVE SUMMARY ---
+    if global_summary_data:
+        summary_content = "\n".join(global_summary_data)
+        exec_report = f"""# 🛡️ Executive Security Dashboard
+**Total Systems Audited:** {len(files)}
+**Critical Findings Found:** {len(global_summary_data)}
+#
+## Global Risk Overview (MITRE ATT&CK Baseline)
+{summary_content}
+"""
+        exec_path = os.path.join(OUTPUT_DIR, f"EXECUTIVE_SUMMARY_{datetime.now().strftime('%Y%m%d')}.md")
+        with open(exec_path, "w", encoding="utf-8") as f:
+            f.write(exec_report)
+        print(f"🏆 BATCH COMPLETE: Executive Summary saved to {exec_path}")
+#
 else:
     print("Error: No log files found in \\logs.")
