@@ -38,14 +38,19 @@ if files:
     content = SecurityTools.read_scan_log(files[0])
     
     # --- PHASE 1: TECHNICAL AUDIT ---
-    print(f"--- Agent 1: Technical Auditor ({TECH_MODEL}) is scanning... ---")
+    print(f"\n🔍 [PHASE 1] Agent 1: Technical Auditor ({TECH_MODEL}) is scanning...")
     tech_prompt = f"Identify the top 3 technical vulnerabilities in this scan: {content}"
     
-    # Clean output immediately so the next agent gets high-quality text
+    # Run Agent 1 and clean the output
     tech_findings = clean_output(auditor.invoke(tech_prompt))
     
+    # NEW: Display live technical findings in terminal
+    print("-" * 50)
+    print(f"CRITICAL VULNERABILITIES DETECTED:\n\n{tech_findings}")
+    print("-" * 50)
+    
     # --- PHASE 2: COMPLIANCE REVIEW ---
-    print(f"--- Agent 2: Compliance Strategist ({COMPLIANCE_MODEL}) is reviewing... ---")
+    print(f"\n⚖️ [PHASE 2] Agent 2: Compliance Strategist ({COMPLIANCE_MODEL}) is reviewing...")
     compliance_prompt = f"""
     Based on these technical findings:
     {tech_findings}
@@ -54,8 +59,13 @@ if files:
     Explain what fines or liabilities an organization faces due to these specific vulnerabilities.
     """
     
-    # Clean the compliance response for the final report
+    # Run Agent 2 and clean the output
     compliance_findings = clean_output(compliance_officer.invoke(compliance_prompt))
+#
+    # NEW: Display live compliance risks in terminal
+    print("-" * 50)
+    print(f"LEGAL & COMPLIANCE IMPACT:\n\n{compliance_findings}")
+    print("-" * 50)
 #
     # 3. Assemble the Consolidated Report
     full_report = f"""# Consolidated AI Security & Compliance Report
@@ -78,6 +88,7 @@ if files:
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(full_report)
     
-    print(f"\n✅ Multi-Agent Audit Complete! Saved to: {report_path}")
+    print(f"\n✅ SUCCESS: Full Report Generated at: {report_path}")
+#
 else:
     print("Error: No log files found in \\logs.")
