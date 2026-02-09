@@ -1,11 +1,11 @@
 import os
 from langchain_ollama import OllamaLLM
-
+#
 # Initialize the generator
 generator = OllamaLLM(model="llama3.2:latest")
-
+#
 print("🧪 Starting Synthetic Security Log Generation...")
-
+#
 for i in range(1, 101):
     prompt = f"""
     Generate a unique, realistic Nmap or security scan log for test case #{i}.
@@ -22,5 +22,5 @@ for i in range(1, 101):
         f.write(unique_log)
     
     print(f"  ✅ Created: {filename}")
-
+#
 print("\n🏆 100 unique test cases generated!")
