@@ -1,0 +1,15 @@
+# Ignore raw security logs (Protects private scan data)
+logs/*.txt
+logs/*.log
+
+# Ignore AI-generated audit reports
+output/
+
+# Ignore local environment and cache
+__pycache__/
+venv/
+.env
+
+# Ignore system files
+.DS_Store
+Thumbs.db
