@@ -1,13 +1,16 @@
 import os
-#
+
+
 class SecurityTools:
     @staticmethod
-    def read_scan_log(filename):
-        """Reads a security scan file from the D:\\AI_COUNCIL\\logs folder."""
-        # We use a relative path to make it professional
-        path = os.path.join("logs", filename)
+    def read_scan_log(path):
+        """Read a security scan log from the given path.
+
+        main.py passes an already-joined path (e.g. ``logs/scan.txt``), so this
+        opens it directly rather than prefixing ``logs/`` a second time.
+        """
         try:
-            with open(path, 'r') as file:
+            with open(path, "r", encoding="utf-8") as file:
                 return file.read()
         except FileNotFoundError:
-            return "Error: Scan file not found in the logs directory."
+            return f"Error: Scan file not found at {path}."
